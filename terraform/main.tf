@@ -1,7 +1,17 @@
 locals {
   github_oidc_role_arn = var.github_oidc_role_arn != "" ? var.github_oidc_role_arn : module.iam.github_oidc_role_arn
-  in_stack_wss         = var.relay_enabled ? (var.relay_hostname != "" ? "wss://${var.relay_hostname}" : "wss://${try(module.relay[0].alb_dns_name, "pending")}") : var.relay_wss_url
+  relay_tls            = var.relay_hostname != "" || var.relay_acm_certificate_arn != ""
+  relay_host           = var.relay_hostname != "" ? var.relay_hostname : try(module.relay[0].alb_dns_name, "pending")
+  relay_scheme         = local.relay_tls ? "wss" : "ws"
+  in_stack_wss         = var.relay_enabled ? "${local.relay_scheme}://${local.relay_host}" : var.relay_wss_url
   effective_relay_wss  = var.relay_wss_url != "" ? var.relay_wss_url : local.in_stack_wss
+}
+
+check "relay_wss_url_required" {
+  assert {
+    condition     = var.relay_enabled || trimspace(var.relay_wss_url) != ""
+    error_message = "relay_wss_url must be a non-empty string when relay_enabled is false."
+  }
 }
 
 module "network" {

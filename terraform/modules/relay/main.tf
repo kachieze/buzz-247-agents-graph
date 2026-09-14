@@ -21,6 +21,12 @@ variable "tags" { type = map(string) }
 
 data "aws_region" "current" {}
 
+locals {
+  relay_tls  = var.hostname != "" || var.acm_certificate_arn != ""
+  relay_host = var.hostname != "" ? var.hostname : aws_lb.relay.dns_name
+  relay_url  = "${local.relay_tls ? "wss" : "ws"}://${local.relay_host}"
+}
+
 resource "random_password" "rds" {
   length  = 24
   special = false
@@ -254,7 +260,7 @@ resource "aws_ecs_task_definition" "relay" {
       { name = "BUZZ_AUTO_MIGRATE", value = "true" },
       { name = "BUZZ_REQUIRE_RELAY_MEMBERSHIP", value = "true" },
       { name = "RELAY_OWNER_PUBKEY", value = var.relay_owner_pubkey },
-      { name = "RELAY_URL", value = var.hostname != "" ? "wss://${var.hostname}" : "ws://${aws_lb.relay.dns_name}" },
+      { name = "RELAY_URL", value = local.relay_url },
       { name = "DATABASE_URL", value = "postgres://buzz:${random_password.rds.result}@${aws_db_instance.relay.address}:5432/buzz" },
       { name = "REDIS_URL", value = "redis://${aws_elasticache_cluster.relay.cache_nodes[0].address}:6379" },
       { name = "BUZZ_S3_BUCKET", value = aws_s3_bucket.media.bucket },

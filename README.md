@@ -75,11 +75,11 @@ CI must not print secret values. Task IAM is EFS-only. Execution role pulls Secr
 | `github_org` / `github_repo` | `kachieze` / `buzz-247-agents-graph` | OIDC `sub` |
 | `github_oidc_role_arn` | `""` | Empty → create role; workflows still use `vars.AWS_ROLE_ARN` |
 | `github_auth_mode` | `app` | `app` or `pat` |
-| `relay_enabled` | `true` | `false` → no RDS/Redis/ALB; set `relay_wss_url` |
+| `relay_enabled` | `true` | `false` → no RDS/Redis/ALB; set `relay_wss_url` (required, non-empty) |
 | `relay_image` | `ghcr.io/block/buzz:desktop-v0.5.20` | |
-| `relay_wss_url` | `""` | Required when relay is external |
-| `relay_hostname` | `""` | Optional DNS name |
-| `relay_acm_certificate_arn` | `""` | Empty → HTTP :80 only |
+| `relay_wss_url` | `""` | Required when `relay_enabled=false`. When in-stack, auto-derived (`ws://` or `wss://` on hostname/ALB) unless set |
+| `relay_hostname` | `""` | Optional DNS name; with ACM → public `wss://` |
+| `relay_acm_certificate_arn` | `""` | Empty → ALB HTTP :80 only; in-stack relay/agents use `ws://` on ALB DNS. Add ACM (and hostname for public DNS) before `wss://` |
 | `create_dns` / `route53_zone_id` | false / `""` | |
 | `relay_owner_pubkey` | `""` | |
 | `grafana_otlp_endpoint` | `""` | Grafana Cloud OTLP URL |

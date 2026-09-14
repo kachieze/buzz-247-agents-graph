@@ -62,7 +62,7 @@ variable "relay_image" {
 variable "relay_wss_url" {
   type        = string
   default     = ""
-  description = "Required when relay_enabled=false. When relay is in-stack, output ALB URL is used unless this is set."
+  description = "Required (non-empty) when relay_enabled=false. When relay is in-stack, ws:// or wss:// on hostname/ALB is derived unless this is set."
 }
 
 variable "relay_hostname" {
