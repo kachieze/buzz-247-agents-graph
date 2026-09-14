@@ -1,0 +1,16 @@
+{
+  "name": "agent-plane-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "agent-plane-mcp": "./server.mjs"
+  },
+  "scripts": {
+    "test": "node --test jail.test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "zod": "^3.24.0"
+  }
+}

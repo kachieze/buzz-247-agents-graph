@@ -1,0 +1,65 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  mcp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: src/mcp/package-lock.json
+      - run: npm ci
+        working-directory: src/mcp
+      - run: npm test
+        working-directory: src/mcp
+
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+          terraform_wrapper: false
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.55.1
+      - name: fmt
+        run: terraform fmt -check -recursive
+      - name: tflint
+        run: |
+          tflint --init
+          tflint --recursive --disable-rule=terraform_required_providers
+      - name: validate
+        run: |
+          terraform init -backend=false
+          terraform validate
+        env:
+          AWS_DEFAULT_REGION: us-east-1
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: agent-plane:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

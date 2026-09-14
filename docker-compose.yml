@@ -1,0 +1,56 @@
+# Local harness only — not production. Requires BUZZ_PRIVATE_KEY in the environment.
+services:
+  relay:
+    image: ${BUZZ_IMAGE:-ghcr.io/block/buzz:desktop-v0.5.20}
+    profiles: ["relay"]
+    environment:
+      BUZZ_BIND_ADDR: 0.0.0.0:3000
+      BUZZ_HEALTH_PORT: "8080"
+      DATABASE_URL: postgres://buzz:buzz@postgres:5432/buzz
+      REDIS_URL: redis://redis:6379
+      RELAY_URL: ws://localhost:3000
+      BUZZ_AUTO_MIGRATE: "true"
+    ports:
+      - "3000:3000"
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  postgres:
+    image: postgres:17-alpine
+    profiles: ["relay"]
+    environment:
+      POSTGRES_DB: buzz
+      POSTGRES_USER: buzz
+      POSTGRES_PASSWORD: buzz
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U buzz -d buzz"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    profiles: ["relay"]
+
+  agent:
+    build: .
+    environment:
+      AGENT_ID: alpha
+      EFS_ROOT: /agents
+      BUZZ_PRIVATE_KEY: ${BUZZ_PRIVATE_KEY:-}
+      BUZZ_RELAY_URL: ${BUZZ_RELAY_URL:-ws://host.docker.internal:3000}
+      CURSOR_API_KEY: ${CURSOR_API_KEY:-}
+      GITHUB_AUTH_MODE: pat
+      GITHUB_PAT: ${GITHUB_PAT:-}
+      BUZZ_ACP_RESPOND_TO: anyone
+    volumes:
+      - agent-data:/agents
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  agent-data:
