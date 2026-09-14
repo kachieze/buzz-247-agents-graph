@@ -1,5 +1,4 @@
 .terraform/
-.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 crash.log
@@ -9,7 +8,8 @@ override.tf.json
 *_override.tf.json
 terraform.tfvars
 .terraform.tfvars
-secrets/
+# Top-level operator secrets dir only — do NOT ignore terraform/modules/secrets/
+/secrets/
 .env
 *.pem
 node_modules/
