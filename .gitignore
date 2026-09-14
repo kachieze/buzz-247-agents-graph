@@ -1,0 +1,18 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+terraform.tfvars
+.terraform.tfvars
+# Top-level operator secrets dir only — do NOT ignore terraform/modules/secrets/
+/secrets/
+.env
+*.pem
+node_modules/
+coverage/
+.DS_Store
+*.tfplan

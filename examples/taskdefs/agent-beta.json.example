@@ -1,0 +1,23 @@
+{
+  "family": "agent-plane-beta",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "4096",
+  "memory": "16384",
+  "ephemeralStorage": { "sizeInGiB": 60 },
+  "containerDefinitions": [
+    {
+      "name": "agent",
+      "image": "ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/agent-plane/runtime:TAG",
+      "essential": true,
+      "environment": [
+        { "name": "AGENT_ID", "value": "beta" },
+        { "name": "EFS_ROOT", "value": "/agents" },
+        { "name": "BUZZ_ACP_RESPOND_TO", "value": "anyone" }
+      ],
+      "secrets": [
+        { "name": "BUZZ_PRIVATE_KEY", "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:agent-plane/beta/nsec" }
+      ]
+    }
+  ]
+}

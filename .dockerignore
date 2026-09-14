@@ -1,0 +1,12 @@
+.git
+.github
+.terraform
+*.tfstate*
+terraform
+examples
+README.md
+LICENSE
+**/.DS_Store
+node_modules
+coverage
+src/mcp/jail.test.mjs
