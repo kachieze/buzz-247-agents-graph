@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 # Mint a GitHub App installation token every 50 minutes (tokens last 1 hour).
 # Writes /tmp/gh_token and a git credential helper.
+# Usage: github-token-refresh.sh [--once]
 set -euo pipefail
 
 TOKEN_FILE="${GH_TOKEN_FILE:-/tmp/gh_token}"
+ONCE=0
+if [[ "${1:-}" == "--once" ]]; then
+  ONCE=1
+fi
 
 need() { [[ -n "${!1:-}" ]] || { echo "missing $1" >&2; exit 1; }; }
 need GITHUB_APP_ID
@@ -44,17 +49,24 @@ EOF
   git config --global credential.helper "/tmp/git-gh-helper.sh"
 }
 
-git_helper
-
-while true; do
-  token="$(mint)"
+apply_token() {
+  local token="$1"
   printf '%s' "${token}" >"${TOKEN_FILE}"
   chmod 0600 "${TOKEN_FILE}"
-  export GH_TOKEN="${token}"
-  export GITHUB_TOKEN="${token}"
   if command -v gh >/dev/null 2>&1; then
     printf '%s\n' "${token}" | gh auth login --hostname github.com --with-token >/dev/null 2>&1 || true
     gh auth setup-git >/dev/null 2>&1 || true
   fi
+}
+
+git_helper
+
+if [[ "${ONCE}" -eq 1 ]]; then
+  apply_token "$(mint)"
+  exit 0
+fi
+
+while true; do
+  apply_token "$(mint)"
   sleep 3000
 done

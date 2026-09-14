@@ -14,9 +14,10 @@ variable "create_dns" { type = bool }
 variable "route53_zone_id" { type = string }
 variable "relay_owner_pubkey" { type = string }
 variable "relay_private_key_arn" { type = string }
-variable "rds_password_arn" { type = string }
+variable "database_url_arn" { type = string }
 variable "s3_access_key_arn" { type = string }
 variable "s3_secret_key_arn" { type = string }
+variable "task_role_name" { type = string }
 variable "tags" { type = map(string) }
 
 data "aws_region" "current" {}
@@ -32,13 +33,30 @@ resource "random_password" "rds" {
   special = false
 }
 
-resource "aws_secretsmanager_secret_version" "rds_seed" {
-  count         = var.rds_password_arn != "" ? 1 : 0
-  secret_id     = var.rds_password_arn
-  secret_string = random_password.rds.result
+resource "aws_secretsmanager_secret_version" "database_url" {
+  count     = var.database_url_arn != "" ? 1 : 0
+  secret_id = var.database_url_arn
+  # Full URL only — never put the password in the task environment (O3).
+  secret_string = "postgres://buzz:${random_password.rds.result}@${aws_db_instance.relay.address}:5432/buzz"
   lifecycle {
     ignore_changes = [secret_string]
   }
+}
+
+resource "aws_iam_role_policy" "relay_s3" {
+  name = "blossom-s3"
+  role = var.task_role_name
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"]
+      Resource = [
+        aws_s3_bucket.media.arn,
+        "${aws_s3_bucket.media.arn}/*",
+      ]
+    }]
+  })
 }
 
 resource "aws_db_subnet_group" "relay" {
@@ -261,7 +279,6 @@ resource "aws_ecs_task_definition" "relay" {
       { name = "BUZZ_REQUIRE_RELAY_MEMBERSHIP", value = "true" },
       { name = "RELAY_OWNER_PUBKEY", value = var.relay_owner_pubkey },
       { name = "RELAY_URL", value = local.relay_url },
-      { name = "DATABASE_URL", value = "postgres://buzz:${random_password.rds.result}@${aws_db_instance.relay.address}:5432/buzz" },
       { name = "REDIS_URL", value = "redis://${aws_elasticache_cluster.relay.cache_nodes[0].address}:6379" },
       { name = "BUZZ_S3_BUCKET", value = aws_s3_bucket.media.bucket },
       { name = "BUZZ_S3_REGION", value = data.aws_region.current.name },
@@ -269,6 +286,7 @@ resource "aws_ecs_task_definition" "relay" {
     ]
     secrets = concat(
       var.relay_private_key_arn != "" ? [{ name = "BUZZ_RELAY_PRIVATE_KEY", valueFrom = var.relay_private_key_arn }] : [],
+      var.database_url_arn != "" ? [{ name = "DATABASE_URL", valueFrom = var.database_url_arn }] : [],
       var.s3_access_key_arn != "" ? [{ name = "BUZZ_S3_ACCESS_KEY", valueFrom = var.s3_access_key_arn }] : [],
       var.s3_secret_key_arn != "" ? [{ name = "BUZZ_S3_SECRET_KEY", valueFrom = var.s3_secret_key_arn }] : [],
     )

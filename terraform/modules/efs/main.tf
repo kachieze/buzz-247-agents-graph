@@ -4,6 +4,12 @@ variable "subnet_ids" { type = list(string) }
 variable "allowed_sg_ids" { type = list(string) }
 variable "tags" { type = map(string) }
 
+# agent_id → EFS subdirectory (creates one access point per agent, uid 1000).
+variable "agent_subdirs" {
+  type    = map(string)
+  default = {}
+}
+
 resource "aws_efs_file_system" "this" {
   encrypted        = true
   performance_mode = "generalPurpose"
@@ -43,5 +49,33 @@ resource "aws_efs_mount_target" "this" {
   security_groups = [aws_security_group.efs.id]
 }
 
+resource "aws_efs_access_point" "agent" {
+  for_each       = var.agent_subdirs
+  file_system_id = aws_efs_file_system.this.id
+
+  posix_user {
+    uid = 1000
+    gid = 1000
+  }
+
+  root_directory {
+    path = "/agents/${each.value}"
+    creation_info {
+      owner_uid   = 1000
+      owner_gid   = 1000
+      permissions = "0750"
+    }
+  }
+
+  tags = merge(var.tags, { Agent = each.key, Name = "${var.name_prefix}-ap-${each.key}" })
+}
+
 output "file_system_id" { value = aws_efs_file_system.this.id }
+output "file_system_arn" { value = aws_efs_file_system.this.arn }
 output "security_group_id" { value = aws_security_group.efs.id }
+output "access_point_ids" {
+  value = { for k, ap in aws_efs_access_point.agent : k => ap.id }
+}
+output "access_point_arns" {
+  value = { for k, ap in aws_efs_access_point.agent : k => ap.arn }
+}
