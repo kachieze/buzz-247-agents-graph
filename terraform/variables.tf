@@ -15,13 +15,8 @@ variable "vpc_cidr" {
 
 variable "image_uri" {
   type        = string
-  description = "Full URI of the agent runtime image (ECR)."
+  description = "Full URI of the agent runtime image (ECR), including tag."
   default     = "111111111111.dkr.ecr.us-east-1.amazonaws.com/agent-plane/runtime:ci"
-}
-
-variable "image_tag" {
-  type    = string
-  default = "latest"
 }
 
 variable "alloy_image" {

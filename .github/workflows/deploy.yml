@@ -45,7 +45,6 @@ jobs:
         working-directory: terraform
         env:
           TF_VAR_image_uri: ${{ env.IMAGE_URI }}
-          TF_VAR_image_tag: ${{ github.event.inputs.image_tag || github.sha }}
         run: |
           terraform init \
             -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \

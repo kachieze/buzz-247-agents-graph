@@ -70,8 +70,7 @@ CI must not print secret values. Task IAM is EFS-only. Execution role pulls Secr
 | `aws_region` | `us-east-1` | |
 | `name_prefix` | `agent-plane` | |
 | `vpc_cidr` | `10.80.0.0/16` | New VPC, 2 AZs, 2 public + 2 private |
-| `image_uri` | dummy CI URI | Set to the pushed ECR image |
-| `image_tag` | `latest` | |
+| `image_uri` | dummy CI URI | Full ECR URI including tag (deploy sets this from the pushed image) |
 | `alloy_image` | `grafana/alloy:v1.8.3` | Sidecar |
 | `github_org` / `github_repo` | `kachieze` / `buzz-247-agents-graph` | OIDC `sub` |
 | `github_oidc_role_arn` | `""` | Empty → create role; workflows still use `vars.AWS_ROLE_ARN` |
