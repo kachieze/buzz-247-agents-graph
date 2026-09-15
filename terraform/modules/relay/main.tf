@@ -23,7 +23,8 @@ variable "tags" { type = map(string) }
 data "aws_region" "current" {}
 
 locals {
-  relay_tls  = var.hostname != "" || var.acm_certificate_arn != ""
+  # B1: ACM-only — matches HTTPS listener count; hostname without ACM stays ws://.
+  relay_tls  = var.acm_certificate_arn != ""
   relay_host = var.hostname != "" ? var.hostname : aws_lb.relay.dns_name
   relay_url  = "${local.relay_tls ? "wss" : "ws"}://${local.relay_host}"
 }

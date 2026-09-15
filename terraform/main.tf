@@ -1,6 +1,7 @@
 locals {
   github_oidc_role_arn = var.github_oidc_role_arn != "" ? var.github_oidc_role_arn : module.iam.github_oidc_role_arn
-  relay_tls            = var.relay_hostname != "" || var.relay_acm_certificate_arn != ""
+  # B1: wss only when ACM is set (HTTPS listener). Hostname alone stays ws:// :80.
+  relay_tls            = var.relay_acm_certificate_arn != ""
   relay_host           = var.relay_hostname != "" ? var.relay_hostname : try(module.relay[0].alb_dns_name, "pending")
   relay_scheme         = local.relay_tls ? "wss" : "ws"
   in_stack_wss         = var.relay_enabled ? "${local.relay_scheme}://${local.relay_host}" : var.relay_wss_url
@@ -18,10 +19,13 @@ locals {
   }
 }
 
-check "relay_wss_url_required" {
-  assert {
-    condition     = var.relay_enabled || trimspace(var.relay_wss_url) != ""
-    error_message = "relay_wss_url must be a non-empty string when relay_enabled is false."
+# B2: blocking precondition (check blocks only warn and do not fail plan).
+resource "terraform_data" "relay_wss_url_required" {
+  lifecycle {
+    precondition {
+      condition     = var.relay_enabled || trimspace(var.relay_wss_url) != ""
+      error_message = "relay_wss_url must be a non-empty string when relay_enabled is false."
+    }
   }
 }
 
