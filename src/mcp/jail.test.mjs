@@ -27,3 +27,8 @@ test("rejects absolute paths outside the jail", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "mcp-jail-abs-"));
   assert.throws(() => jail("/etc/passwd", root), /escapes jail/);
 });
+
+test("rejects NUL in path", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "mcp-jail-nul-"));
+  assert.throws(() => jail("note\0.txt", root), /NUL/);
+});

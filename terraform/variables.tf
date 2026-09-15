@@ -62,7 +62,7 @@ variable "relay_image" {
 variable "relay_wss_url" {
   type        = string
   default     = ""
-  description = "Required when relay_enabled=false. When relay is in-stack, output ALB URL is used unless this is set."
+  description = "Required (non-empty) when relay_enabled=false. When relay is in-stack, ws:// or wss:// on hostname/ALB is derived unless this is set."
 }
 
 variable "relay_hostname" {
@@ -71,8 +71,9 @@ variable "relay_hostname" {
 }
 
 variable "relay_acm_certificate_arn" {
-  type    = string
-  default = ""
+  type        = string
+  default     = ""
+  description = "ACM cert for the public ALB. Empty = lab HTTP :80 only. Required before exposing a public wss:// relay (O7)."
 }
 
 variable "create_dns" {
@@ -114,6 +115,12 @@ variable "agents" {
 variable "create_secret_shells" {
   type    = bool
   default = true
+}
+
+variable "secret_recovery_window_days" {
+  type        = number
+  default     = 7
+  description = "Secrets Manager recovery window. Use 7+ for real keys; 0 is throwaway-lab only (immediate deletion)."
 }
 
 variable "tags" {

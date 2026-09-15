@@ -15,6 +15,7 @@ variable "security_group_ids" { type = list(string) }
 variable "execution_role_arn" { type = string }
 variable "task_role_arn" { type = string }
 variable "efs_id" { type = string }
+variable "efs_access_point_id" { type = string }
 variable "relay_wss_url" { type = string }
 variable "github_auth_mode" { type = string }
 variable "grafana_otlp_endpoint" { type = string }
@@ -36,6 +37,7 @@ resource "aws_cloudwatch_log_group" "agent" {
 }
 
 locals {
+  home_path = "/agents/${var.efs_subdir}"
   github_secrets = var.github_auth_mode == "app" ? [
     { name = "GITHUB_APP_ID", valueFrom = var.github_app_id_arn },
     { name = "GITHUB_APP_INSTALLATION_ID", valueFrom = var.github_install_id_arn },
@@ -69,7 +71,10 @@ resource "aws_ecs_task_definition" "agent" {
     efs_volume_configuration {
       file_system_id     = var.efs_id
       transit_encryption = "ENABLED"
-      root_directory     = "/"
+      authorization_config {
+        access_point_id = var.efs_access_point_id
+        iam             = "ENABLED"
+      }
     }
   }
 
@@ -78,7 +83,8 @@ resource "aws_ecs_task_definition" "agent" {
       name      = "agent"
       image     = var.image_uri
       essential = true
-      user      = "0"
+      # Match image `agent` user / EFS access-point posix uid (O2).
+      user = "1000:1000"
       linuxParameters = {
         initProcessEnabled = true
       }
@@ -86,6 +92,7 @@ resource "aws_ecs_task_definition" "agent" {
         [
           { name = "AGENT_ID", value = var.efs_subdir },
           { name = "EFS_ROOT", value = "/agents" },
+          { name = "HOME", value = local.home_path },
           { name = "BUZZ_RELAY_URL", value = var.relay_wss_url },
           { name = "BUZZ_ACP_RESPOND_TO", value = var.respond_to },
           { name = "BUZZ_ACP_AGENT_COMMAND", value = "cursor-agent" },
@@ -94,7 +101,7 @@ resource "aws_ecs_task_definition" "agent" {
           { name = "BUZZ_ACP_IDLE_TIMEOUT", value = "900" },
           { name = "BUZZ_ACP_MAX_TURN_DURATION", value = "7200" },
           { name = "BUZZ_ACP_MCP_COMMAND", value = "/opt/mcp/server.mjs" },
-          { name = "MCP_FS_ROOT", value = "/agents/${var.efs_subdir}" },
+          { name = "MCP_FS_ROOT", value = local.home_path },
           { name = "GITHUB_AUTH_MODE", value = var.github_auth_mode },
           { name = "OTEL_EXPORTER_OTLP_ENDPOINT", value = "http://127.0.0.1:4317" },
         ],
@@ -111,7 +118,7 @@ resource "aws_ecs_task_definition" "agent" {
       )
       mountPoints = [{
         sourceVolume  = "agent-efs"
-        containerPath = "/agents"
+        containerPath = local.home_path
         readOnly      = false
       }]
       logConfiguration = {

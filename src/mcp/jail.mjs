@@ -17,6 +17,9 @@ export function jail(userPath, root = jailRoot()) {
   if (typeof userPath !== "string" || userPath.length === 0) {
     throw new Error("path required");
   }
+  if (userPath.includes("\0")) {
+    throw new Error("path contains NUL");
+  }
   const rootReal = fs.realpathSync(path.resolve(root));
   const candidate = path.resolve(rootReal, userPath);
   let real;

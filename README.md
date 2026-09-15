@@ -52,7 +52,7 @@ Desktop **Edit agent** does **not** change Fargate `BUZZ_ACP_RESPOND_TO`. Patch 
 | optional `BUZZ_AUTH_TAG` | per agent; needed only for `buzz agents draft-create` |
 | GitHub App id / installation / PEM **or** PAT | stack |
 | Grafana Cloud instance id + token | stack |
-| Relay private key, RDS password, S3 keys | if `relay_enabled` |
+| Relay private key, **DATABASE_URL**, S3 keys | if `relay_enabled` (password never in task env) |
 
 Terraform creates **empty secret shells**. Fill them:
 
@@ -61,7 +61,9 @@ aws secretsmanager put-secret-value --secret-id agent-plane/alpha/nsec --secret-
 aws secretsmanager put-secret-value --secret-id agent-plane/alpha/cursor --secret-string 'cursor_…'
 ```
 
-CI must not print secret values. Task IAM is EFS-only. Execution role pulls Secrets Manager `agent-plane/*`.
+CI must not print secret values. **Per-agent execution roles** may `GetSecretValue` only on that agent's nsec/cursor/auth-tag plus shared GitHub/Grafana secrets — never sibling nsecs or relay secrets. Relay uses a separate execution role. Task roles are EFS access-point scoped (no `ClientRootAccess`) plus `ssmmessages` for ECS Exec.
+
+Secret shells default to `recovery_window_in_days = 7`. Set `secret_recovery_window_days = 0` only for throwaway lab stacks (immediate deletion on destroy).
 
 ## Terraform variables
 
@@ -75,16 +77,17 @@ CI must not print secret values. Task IAM is EFS-only. Execution role pulls Secr
 | `github_org` / `github_repo` | `kachieze` / `buzz-247-agents-graph` | OIDC `sub` |
 | `github_oidc_role_arn` | `""` | Empty → create role; workflows still use `vars.AWS_ROLE_ARN` |
 | `github_auth_mode` | `app` | `app` or `pat` |
-| `relay_enabled` | `true` | `false` → no RDS/Redis/ALB; set `relay_wss_url` |
+| `relay_enabled` | `true` | `false` → no RDS/Redis/ALB; set `relay_wss_url` (required, non-empty) |
 | `relay_image` | `ghcr.io/block/buzz:desktop-v0.5.20` | |
-| `relay_wss_url` | `""` | Required when relay is external |
-| `relay_hostname` | `""` | Optional DNS name |
-| `relay_acm_certificate_arn` | `""` | Empty → HTTP :80 only |
+| `relay_wss_url` | `""` | Required when `relay_enabled=false`. When in-stack, auto-derived (`ws://` or `wss://` on hostname/ALB) unless set |
+| `relay_hostname` | `""` | Optional DNS name; with ACM → public `wss://` |
+| `relay_acm_certificate_arn` | `""` | Empty → ALB HTTP :80 only; in-stack relay/agents use `ws://` on ALB DNS. **ACM required before a public `wss://` relay** (lab HTTP is OK). |
 | `create_dns` / `route53_zone_id` | false / `""` | |
 | `relay_owner_pubkey` | `""` | |
 | `grafana_otlp_endpoint` | `""` | Grafana Cloud OTLP URL |
 | `agents` | `{}` | See example tfvars |
 | `create_secret_shells` | `true` | |
+| `secret_recovery_window_days` | `7` | `0` = throwaway lab only; otherwise ≥7 |
 
 State: partial `backend "s3" {}`. Init with:
 
@@ -116,7 +119,11 @@ docker build -t agent-plane:local .
 
 ## MCP jail
 
-Filesystem tools are rooted at `$HOME` (`/agents/<id>` on EFS). Paths such as `../beta` are rejected. Playwright is **not** an MCP tool; Cursor drives Chromium via shell.
+Filesystem tools are rooted at `$HOME` (`/agents/<id>` on an EFS **access point**). Paths such as `../beta`, absolute escapes, and embedded NUL bytes are rejected. Playwright is **not** an MCP tool; Cursor drives Chromium via shell.
+
+## TLS / public relay
+
+Empty `relay_acm_certificate_arn` keeps the ALB on HTTP :80 for lab use (`ws://`). Do **not** point a public DNS name at that listener without ACM. Set `relay_acm_certificate_arn` (and usually `relay_hostname` + `create_dns`) before treating the relay as a public `wss://` endpoint.
 
 ## Observability
 

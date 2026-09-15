@@ -20,6 +20,15 @@ mkdir -p "${XDG_CONFIG_HOME}" "${XDG_CACHE_HOME}" "${HOME_DIR}/.local/bin"
 cd "${HOME}"
 
 if [[ "${GITHUB_AUTH_MODE:-app}" == "app" ]]; then
+  # Mint once in the foreground so MCP/gh inherit GH_TOKEN (Q-3).
+  # Background loop refreshes the file + gh auth thereafter.
+  /usr/local/bin/github-token-refresh.sh --once
+  # shellcheck disable=SC1091
+  if [[ -f /tmp/gh_token ]]; then
+    export GH_TOKEN
+    GH_TOKEN="$(cat /tmp/gh_token)"
+    export GITHUB_TOKEN="${GH_TOKEN}"
+  fi
   /usr/local/bin/github-token-refresh.sh &
 elif [[ "${GITHUB_AUTH_MODE:-}" == "pat" ]]; then
   if [[ -n "${GITHUB_PAT:-}" ]]; then

@@ -3,9 +3,11 @@ aws_region   = "us-east-1"
 name_prefix  = "agent-plane"
 image_uri    = "111111111111.dkr.ecr.us-east-1.amazonaws.com/agent-plane/runtime:changeme"
 relay_enabled = true
-# Leave empty until ACM exists; ALB will listen on HTTP :80.
+# Leave empty for lab: ALB HTTP :80, in-stack relay/agents use ws:// on ALB DNS.
+# ACM is required before a public wss:// relay (lab HTTP OK).
 relay_acm_certificate_arn = ""
 relay_hostname            = ""
+# secret_recovery_window_days = 7   # default; use 0 only for throwaway lab
 create_dns                = false
 relay_owner_pubkey        = ""
 github_org                = "kachieze"
