@@ -12,7 +12,10 @@
       "efsVolumeConfiguration": {
         "fileSystemId": "fs-EXAMPLE",
         "transitEncryption": "ENABLED",
-        "rootDirectory": "/"
+        "authorizationConfig": {
+          "accessPointId": "fsap-ALPHA-EXAMPLE",
+          "iam": "ENABLED"
+        }
       }
     }
   ],
@@ -21,22 +24,26 @@
       "name": "agent",
       "image": "ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/agent-plane/runtime:TAG",
       "essential": true,
+      "user": "1000:1000",
       "environment": [
         { "name": "AGENT_ID", "value": "alpha" },
         { "name": "EFS_ROOT", "value": "/agents" },
+        { "name": "HOME", "value": "/agents/alpha" },
+        { "name": "MCP_FS_ROOT", "value": "/agents/alpha" },
         { "name": "BUZZ_RELAY_URL", "value": "wss://relay.example.invalid" },
         { "name": "BUZZ_ACP_AGENT_COMMAND", "value": "cursor-agent" },
         { "name": "BUZZ_ACP_AGENT_ARGS", "value": "acp" },
         { "name": "BUZZ_ACP_AGENTS", "value": "1" },
         { "name": "BUZZ_ACP_RESPOND_TO", "value": "anyone" },
-        { "name": "BUZZ_ACP_MCP_COMMAND", "value": "/opt/mcp/server.mjs" }
+        { "name": "BUZZ_ACP_MCP_COMMAND", "value": "/opt/mcp/server.mjs" },
+        { "name": "GITHUB_AUTH_MODE", "value": "app" }
       ],
       "secrets": [
         { "name": "BUZZ_PRIVATE_KEY", "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:agent-plane/alpha/nsec" },
         { "name": "CURSOR_API_KEY", "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:agent-plane/alpha/cursor" }
       ],
       "mountPoints": [
-        { "sourceVolume": "agent-efs", "containerPath": "/agents", "readOnly": false }
+        { "sourceVolume": "agent-efs", "containerPath": "/agents/alpha", "readOnly": false }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",

@@ -20,15 +20,12 @@ mkdir -p "${XDG_CONFIG_HOME}" "${XDG_CACHE_HOME}" "${HOME_DIR}/.local/bin"
 cd "${HOME}"
 
 if [[ "${GITHUB_AUTH_MODE:-app}" == "app" ]]; then
-  # Mint once in the foreground so MCP/gh inherit GH_TOKEN (Q-3).
-  # Background loop refreshes the file + gh auth thereafter.
+  # Mint once so git/gh are ready before exec. Do **not** export GH_TOKEN /
+  # GITHUB_TOKEN into this long-lived parent: gh prefers those env vars over
+  # refreshed gh-auth / credential-helper tokens, so MCP/`gh` would keep the
+  # first mint after the 50-minute loop (Q-3, spec §10).
   /usr/local/bin/github-token-refresh.sh --once
-  # shellcheck disable=SC1091
-  if [[ -f /tmp/gh_token ]]; then
-    export GH_TOKEN
-    GH_TOKEN="$(cat /tmp/gh_token)"
-    export GITHUB_TOKEN="${GH_TOKEN}"
-  fi
+  unset GH_TOKEN GITHUB_TOKEN || true
   /usr/local/bin/github-token-refresh.sh &
 elif [[ "${GITHUB_AUTH_MODE:-}" == "pat" ]]; then
   if [[ -n "${GITHUB_PAT:-}" ]]; then

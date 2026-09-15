@@ -5,18 +5,37 @@
   "cpu": "4096",
   "memory": "16384",
   "ephemeralStorage": { "sizeInGiB": 60 },
+  "volumes": [
+    {
+      "name": "agent-efs",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "fs-EXAMPLE",
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+          "accessPointId": "fsap-BETA-EXAMPLE",
+          "iam": "ENABLED"
+        }
+      }
+    }
+  ],
   "containerDefinitions": [
     {
       "name": "agent",
       "image": "ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/agent-plane/runtime:TAG",
       "essential": true,
+      "user": "1000:1000",
       "environment": [
         { "name": "AGENT_ID", "value": "beta" },
         { "name": "EFS_ROOT", "value": "/agents" },
+        { "name": "HOME", "value": "/agents/beta" },
+        { "name": "MCP_FS_ROOT", "value": "/agents/beta" },
         { "name": "BUZZ_ACP_RESPOND_TO", "value": "anyone" }
       ],
       "secrets": [
         { "name": "BUZZ_PRIVATE_KEY", "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:agent-plane/beta/nsec" }
+      ],
+      "mountPoints": [
+        { "sourceVolume": "agent-efs", "containerPath": "/agents/beta", "readOnly": false }
       ]
     }
   ]
