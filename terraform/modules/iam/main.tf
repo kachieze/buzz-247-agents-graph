@@ -107,17 +107,24 @@ resource "aws_iam_role_policy" "agent_efs" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "EfsMountTargets"
+        Sid      = "EfsDescribeMountTargets"
+        Effect   = "Allow"
+        Action   = ["elasticfilesystem:DescribeMountTargets"]
+        Resource = var.efs_file_system_arn
+      },
+      {
+        Sid    = "EfsClientMountViaAccessPoint"
         Effect = "Allow"
         Action = [
           "elasticfilesystem:ClientMount",
           "elasticfilesystem:ClientWrite",
-          "elasticfilesystem:DescribeMountTargets"
         ]
-        Resource = [
-          var.efs_file_system_arn,
-          each.value.access_point_arn,
-        ]
+        Resource = var.efs_file_system_arn
+        Condition = {
+          StringEquals = {
+            "elasticfilesystem:AccessPointArn" = each.value.access_point_arn
+          }
+        }
       }
     ]
   })

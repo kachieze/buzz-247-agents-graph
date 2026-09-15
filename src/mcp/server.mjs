@@ -71,7 +71,7 @@ server.tool(
 
 server.tool(
   "github_pr",
-  "Thin wrap of `gh pr`. Uses GH_TOKEN from the GitHub App refresh loop or PAT.",
+  "Thin wrap of `gh pr`. App mode: gh auth + git credential helper (not a parent GH_TOKEN). PAT mode: GH_TOKEN from GITHUB_PAT.",
   {
     args: z.array(z.string()).min(1).describe("Arguments after `gh pr`"),
   },

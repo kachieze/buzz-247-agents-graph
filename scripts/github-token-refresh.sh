@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Mint a GitHub App installation token every 50 minutes (tokens last 1 hour).
-# Writes /tmp/gh_token and a git credential helper.
+# Writes /tmp/gh_token, a git credential helper, and `gh auth login` /
+# `gh auth setup-git`. Do not export GH_TOKEN into long-lived parents —
+# gh will prefer a stale env var over the refreshed store (Q-3, spec §10).
 # Usage: github-token-refresh.sh [--once]
 set -euo pipefail
 
@@ -38,11 +40,11 @@ mint() {
 }
 
 git_helper() {
-  cat >/tmp/git-gh-helper.sh <<'EOF'
+  cat >/tmp/git-gh-helper.sh <<EOF
 #!/bin/sh
-if [ "$1" = get ]; then
+if [ "\$1" = get ]; then
   echo "username=x-access-token"
-  echo "password=$(cat /tmp/gh_token)"
+  echo "password=\$(cat ${TOKEN_FILE})"
 fi
 EOF
   chmod 0700 /tmp/git-gh-helper.sh
